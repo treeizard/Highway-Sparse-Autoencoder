@@ -1,7 +1,7 @@
 import gymnasium as gym
 import highway_env  # make sure this is installed
 from stable_baselines3 import DQN
-from seed import set_seed, seed_env
+from BaseModel.util.seed import set_seed, seed_env
 
 # Create Environment
 env = gym.make("merge-v0")
