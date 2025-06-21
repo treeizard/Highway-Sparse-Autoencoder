@@ -1,9 +1,11 @@
 import os
 import torch
-import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
+from models.base_model import TorchMLP
+from models.SAE import SparseAutoencoder
+from util.data_tool import load_npy_pairs
 from tqdm import trange
 
 # Config
@@ -13,38 +15,15 @@ data_folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 labels_path = os.path.join(data_folder_path, 'labels')
 obs_path = os.path.join(data_folder_path, 'obs')
 
-# Load data
-def load_npy_pairs(obs_dir, label_dir):
-    obs_files = sorted([f for f in os.listdir(obs_dir) if f.endswith('.npy')])
-    X, y = [], []
-    for fname in obs_files:
-        obs = np.load(os.path.join(obs_dir, fname))
-        label = np.load(os.path.join(label_dir, fname))
-        X.append(obs)
-        y.append(label)
-    return np.vstack(X), np.concatenate(y)
+
 
 # Load observations and labels
 X_np, y_np = load_npy_pairs(obs_path, labels_path)
-
 X_tensor = torch.tensor(X_np, dtype=torch.float32).to(device)
 X_tensor = X_tensor.reshape(X_tensor.shape[0], -1)
+
 # Load Torch model
 torch_model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'BaseModel', 'torch_model', file_name + '.pt'))
-class TorchMLP(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(25, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 5)
-        )
-
-    def forward(self, x):
-        q_values = self.net(x)
-        return torch.argmax(q_values, dim=1)
 
 # Instantiate and load state_dict
 base_model = TorchMLP().to(device)
@@ -66,23 +45,7 @@ hook.remove()
 layer2_acts = torch.cat(activations, dim=0).to(device)  # Shape: [N, 256]
 
 # Define sparse autoencoder
-class SparseAutoencoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim=2304, sparsity_lambda=5e-3):
-        super().__init__()
-        self.encoder = nn.Linear(input_dim, hidden_dim)
-        self.decoder = nn.Linear(hidden_dim, input_dim)
-        self.relu = nn.ReLU()
-        self.sparsity_lambda = sparsity_lambda
 
-    def forward(self, x):
-        z = self.relu(self.encoder(x))
-        x_hat = self.decoder(z)
-        return x_hat, z
-
-    def loss(self, x, x_hat, z):
-        recon_loss = nn.functional.mse_loss(x_hat, x)
-        sparsity_loss = self.sparsity_lambda * torch.mean(torch.abs(z))
-        return recon_loss + sparsity_loss
 
 # Train SAE
 sae = SparseAutoencoder(input_dim=256).to(device)
