@@ -2,7 +2,7 @@ import argparse
 import gymnasium as gym
 import highway_env  # Ensure this is installed
 from stable_baselines3 import DQN
-from BaseModel.util.seed import set_seed, seed_env
+from util.seed import set_seed, seed_env
 
 # Define mapping from input name to environment and model path
 ENV_CONFIG = {
