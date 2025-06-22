@@ -21,15 +21,15 @@ Different Name available:
 - merge
 
 ```
-python test.py highway
+python3 test.py all --model super
 ```
+
 ### 3. Convert Model to Torch
 Different Name available: 
 - highway
 - merge
-
 ```
-python convert_model.py highway
+python3 convert.py super
 ```
 
 ### FAQ:

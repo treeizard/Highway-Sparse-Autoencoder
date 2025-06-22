@@ -43,7 +43,7 @@ def convert_and_save(model_name):
 # CLI entry point
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert SB3 DQN model to Torch")
-    parser.add_argument("model_name", choices=["highway", "merge"], help="Model prefix name (e.g., 'highway', 'merge')")
+    parser.add_argument("model_name", choices=["highway", "merge", "super"], help="Model prefix name (e.g., 'highway', 'merge', 'super')")
     args = parser.parse_args()
 
     convert_and_save(args.model_name)
