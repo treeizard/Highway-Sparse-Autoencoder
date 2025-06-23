@@ -195,7 +195,12 @@ cython_debug/
 
 # HighwayEnv
 HighwayEnv
+
+# Models
 BaseModel/torch_model
 BaseModel/output
+
 DataEngine/model
 DataEngine/data
+
+SparseAutoencoder/sae_ckpt
