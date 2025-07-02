@@ -204,3 +204,4 @@ DataEngine/model
 DataEngine/data
 
 SparseAutoencoder/sae_ckpt
+SparseAutoencoder/data_processed
