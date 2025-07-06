@@ -9,39 +9,37 @@ from util.data_tool import load_npy_pairs
 from tqdm import trange
 from util.seed import set_seed
 
-# Config
+# ------------------ Config ------------------
 set_seed()
 
 file_name = 'super_dqn'
 scenarios = ['highway', 'merge', 'roundabout']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load base model
+# ------------------ Load Base Model ------------------
 torch_model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'BaseModel', 'torch_model', file_name + '.pt'))
 base_model = TorchMLP().to(device)
 base_model.load_state_dict(torch.load(torch_model_path, map_location=device))
 base_model.eval()
 
-# Register hook to extract 2nd hidden layer activations (ReLU)
+# ------------------ Register Hook ------------------
 activations = []
 def hook_fn(module, input, output):
     activations.append(output.detach().cpu())
 
 hook = base_model.net[3].register_forward_hook(hook_fn)
 
-# Collect activations across scenarios
+# ------------------ Collect Activations ------------------
 all_activations = []
 for scenario in scenarios:
-    print(f"Processing scenario: {scenario}")
+    print(f"📥 Processing scenario: {scenario}")
     data_folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'DataEngine', 'data', file_name, scenario))
     labels_path = os.path.join(data_folder_path, 'labels')
     obs_path = os.path.join(data_folder_path, 'obs')
 
-    # Load data
     X_np, y_np = load_npy_pairs(obs_path, labels_path)
     X_tensor = torch.tensor(X_np, dtype=torch.float32).to(device).reshape(X_np.shape[0], -1)
 
-    # Forward pass to capture activations
     activations.clear()
     with torch.no_grad():
         _ = base_model(X_tensor)
@@ -49,43 +47,67 @@ for scenario in scenarios:
     all_activations.append(layer2_acts)
 
 hook.remove()
+X_all = torch.cat(all_activations, dim=0)  # [N, 256]
 
-# Merge all activations
-X_all = torch.cat(all_activations, dim=0)  # Shape [total_N, 256]
-
-# Train Sparse Autoencoder
-sae = SparseAutoencoder(input_dim=256, hidden_dim=1024, sparsity_lambda=5e-3).to(device)
+# ------------------ SAE Init ------------------
+sae = SparseAutoencoder(input_dim=256, hidden_dim=1024, 
+                        sparsity_lambda=5e-5, target_sparsity = 0.01).to(device)
 optimizer = torch.optim.Adam(sae.parameters(), lr=1e-3)
 writer = SummaryWriter(log_dir='runs/super_dqn_sae')
 
-n_epochs = 40000
+# ------------------ Training Loop ------------------
+n_epochs = 80000
+best_accuracy = -1.0
+ckpt_dir = os.path.join(os.path.dirname(__file__), 'sae_ckpt')
+os.makedirs(ckpt_dir, exist_ok=True)
+
 for epoch in trange(n_epochs, desc="Training SAE"):
     sae.train()
     x_hat, z = sae(X_all)
-    loss = sae.loss(X_all, x_hat, z)
+    loss_recon, loss_sparse = sae.loss(X_all, x_hat, z)
+    loss = loss_recon + loss_sparse
+    recon_perc = loss_recon/loss
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
-    writer.add_scalar("Loss/train", loss.item(), epoch)
+    # Logging
+    writer.add_scalar("Loss Reconstruction", loss_recon.item(), epoch)
+    writer.add_scalar("Loss Sparsity", loss_sparse.item(), epoch)
+    writer.add_scalar("Percentage of Reconstruction", recon_perc.item(), epoch)
+
+    # Evaluate accuracy every 100 epochs
     if epoch % 100 == 0:
-        print(f"Epoch {epoch}: Loss = {loss.item():.6f}")
+        sae.eval()
+        with torch.no_grad():
+            base_out = base_model.net[4:](X_all)
+            base_pred = torch.argmax(base_out, dim=1)
 
-writer.close()
+            latent = sae.relu(sae.encoder(X_all))
+            h2_recon = sae.decoder(latent)
+            sae_out = base_model.net[4:](h2_recon)
+            sae_pred = torch.argmax(sae_out, dim=1)
 
-# Save SAE model
-ckpt_dir = os.path.join(os.path.dirname(__file__), 'sae_ckpt')
-os.makedirs(ckpt_dir, exist_ok=True)
-ckpt_path = os.path.join(ckpt_dir, 'sae_super_dqn.pt')
-torch.save(sae.state_dict(), ckpt_path)
-print(f"SAE model saved to {ckpt_path}")
+            correct = torch.sum(base_pred == sae_pred).item()
+            total = base_pred.numel()
+            accuracy = correct / total * 100.0
 
-# Extract sparse codes
+            writer.add_scalar("Accuracy/reconstruction", accuracy, epoch)
+            print(f"[Epoch {epoch:5d}] Loss = {loss.item():.6f} | SAE Reconstruction Accuracy = {accuracy:.2f}%")
+
+            # Save best checkpoint
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_ckpt_path = os.path.join(ckpt_dir, 'sae_super_dqn_best.pt')
+                torch.save(sae.state_dict(), best_ckpt_path)
+                print(f"💾 Saved best model at Epoch {epoch} with Accuracy = {accuracy:.2f}%")
+
+
+# ------------------ Top Neuron Analysis ------------------
 sae.eval()
 with torch.no_grad():
     _, sparse_codes = sae(X_all)
 
-# Top-10 active neurons
 topk_vals, topk_inds = sparse_codes.topk(k=10, dim=1)
 all_top_indices = topk_inds.flatten().cpu().numpy()
 unique, counts = np.unique(all_top_indices, return_counts=True)
@@ -93,7 +115,7 @@ sorted_pairs = sorted(zip(unique, counts), key=lambda x: x[1], reverse=True)
 top10_indices = [idx for idx, _ in sorted_pairs[:10]]
 top10_activations = sparse_codes[:, top10_indices].detach().cpu().numpy()
 
-# Plot overall histogram
+# Plot all 10
 plt.figure(figsize=(10, 6))
 for i, idx in enumerate(top10_indices):
     plt.hist(top10_activations[:, i], bins=50, alpha=0.6, label=f"Neuron {idx}")
@@ -104,7 +126,7 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-# Subplot per neuron
+# Subplots per neuron
 fig, axes = plt.subplots(nrows=5, ncols=2, figsize=(12, 12))
 axes = axes.flatten()
 for i, idx in enumerate(top10_indices):

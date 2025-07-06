@@ -21,7 +21,7 @@ base_model.eval()
 
 # Load trained SAE model
 sae = SparseAutoencoder(input_dim=256, hidden_dim=1024, sparsity_lambda=5e-3).to(device)
-ckpt_path = os.path.join(os.path.dirname(__file__), 'sae_ckpt', 'sae_super_dqn.pt')
+ckpt_path = os.path.join(os.path.dirname(__file__), 'sae_ckpt', 'sae_super_dqn_best.pt')
 sae.load_state_dict(torch.load(ckpt_path, map_location=device))
 sae.eval()
 

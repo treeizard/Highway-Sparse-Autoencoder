@@ -13,7 +13,7 @@ n_latents = Z.shape[1]
 
 # ------------------ SINDy Config ------------------
 library = ps.PolynomialLibrary(degree=1, include_bias=True, include_interaction=True)
-optimizer = ps.STLSQ(threshold=1e-2)
+optimizer = ps.STLSQ(threshold=5e-2)
 
 models = []
 equations = []
