@@ -24,7 +24,8 @@ python3 setup.py
 ### 1.2. Training Base Model
 
 ## TODO:
-- [ ] retrain the SAE using the newest data.
-- [ ] set up a testing pipline which allows for the record of data when the neurons in the SAE is modified 
-- [ ] 
+- [x] retrain the SAE using the newest data.
+- [x] set up a testing pipline which allows for the record of data when the neurons in the SAE is modified 
+- [ ] code revision to ensure the code is functioning as expected.
+- [ ] review to ensure the most optimal visualization
 

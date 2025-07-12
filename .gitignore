@@ -207,3 +207,5 @@ DataEngine/data.zip
 SparseAutoencoder/sae_ckpt
 SparseAutoencoder/data
 SparseAutoencoder/data_processed
+
+TestEnv/data

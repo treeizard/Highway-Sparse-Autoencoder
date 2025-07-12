@@ -1,10 +1,11 @@
+import os
 import gymnasium as gym
 import highway_env
 from stable_baselines3 import DQN
 import numpy as np
-import os
 import imageio
 import cv2
+import torch
 from util.seed import set_seed
 from tqdm import trange
 
@@ -47,6 +48,7 @@ for env_id in ENV_LIST:
     output_dir = os.path.join("data", model_name, scenario_name)
     os.makedirs(os.path.join(output_dir, "obs"), exist_ok=True)
     os.makedirs(os.path.join(output_dir, "labels"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "actions"), exist_ok=True)
     if record_video:
         os.makedirs(os.path.join(output_dir, "videos"), exist_ok=True)
 
@@ -54,21 +56,28 @@ for env_id in ENV_LIST:
     env = gym.make(env_id, render_mode='rgb_array' if (record_video or play_video) else None)
 
     for demo_id in trange(1, num_scenarios + 1, desc=f"{scenario_name}"):
-        obs_log, label_log, frame_log = [], [], []
+        obs_log, label_log, action_log, frame_log = [], [], [], []
 
-        obs, _ = env.reset(seed=SEED + demo_id)  # Ensure deterministic reset
+        obs, _ = env.reset(seed=SEED + demo_id)
         done = False
         step = 0
 
         while not done and step < max_steps:
-            # Predict action
-            action, _ = model.predict(obs, deterministic=True)
-            label_log.append(int(action))
+            # Convert observation to tensor
+            obs_tensor = model.policy.obs_to_tensor(obs)[0]
+
+            with torch.no_grad():
+                q_values = model.q_net(obs_tensor)[0]  # shape: [num_actions]
+                action = torch.argmax(q_values).item()
+
+            # Log data
+            label_log.append(action)
+            action_log.append(q_values.cpu().numpy())
+            obs_log.append(obs)
 
             # Environment step
             obs, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
-            obs_log.append(obs)
 
             # Render and save frames
             if record_video or play_video:
@@ -87,6 +96,7 @@ for env_id in ENV_LIST:
         # Save data
         np.save(os.path.join(output_dir, "obs", f"demo{demo_id}.npy"), np.array(obs_log))
         np.save(os.path.join(output_dir, "labels", f"demo{demo_id}.npy"), np.array(label_log))
+        np.save(os.path.join(output_dir, "actions", f"demo{demo_id}.npy"), np.array(action_log))
 
         if record_video and len(frame_log) > 0:
             video_path = os.path.join(output_dir, "videos", f"demo{demo_id}.mp4")
