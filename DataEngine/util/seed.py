@@ -1,24 +1,14 @@
 # seed.py
-
+import torch
+import os
 import random
 import numpy as np
 
-def set_seed(seed: int = 45):
-    """
-    Set the seed for Python, NumPy, and (optionally) PyTorch.
-    """
+def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
-    print(f"Python and NumPy seeds set to {seed}")
-
-    try:
-        import torch
-        torch.manual_seed(seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(seed)
-        print("PyTorch seed set.")
-    except ImportError:
-        print("PyTorch not installed; skipping torch seed.")
+    torch.manual_seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
 
 def seed_env(env, seed: int = 45):
     """

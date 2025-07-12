@@ -7,7 +7,7 @@ from models.base_model import TorchMLP
 from models.SAE import SparseAutoencoder
 
 # ------------------ Config ------------------
-def set_seed(seed=0):
+def set_seed(seed=45):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
