@@ -209,3 +209,6 @@ SparseAutoencoder/data
 SparseAutoencoder/data_processed
 
 TestEnv/data
+TestEnv/data_original
+TestEnv/data_mr1
+TestEnv/data_dyna_test

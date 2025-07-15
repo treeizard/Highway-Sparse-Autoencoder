@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # Configuration
 scenarios = ['highway', 'merge', 'roundabout']
-demo_file = 'demo1.npy'  # Set the specific demo to compare
+demo_file = 'demo2.npy'  # Set the specific demo to compare
 raw_base_dir = os.path.join("..", "DataEngine", "data", "super_dqn")
 perturbed_base_dir = os.path.join("data", "super_dqn_sae")
 
