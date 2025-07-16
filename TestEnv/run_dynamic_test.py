@@ -15,14 +15,14 @@ from SparseAutoencoder.models.SAE import SparseAutoencoder
 # -------------------------------
 # Config
 # -------------------------------
-num_scenarios = 5
+num_scenarios = 1
 record_video = True
 play_video = False
 max_steps = 5000
 model_name = 'super_dqn'
 SEED = 45
-neuron_index = 894
-perturb_factor = 10
+neuron_index = 16
+perturb_factor = 0.7
 
 # -------------------------------
 # Set seeds globally

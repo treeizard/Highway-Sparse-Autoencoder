@@ -7,7 +7,7 @@ from matplotlib.widgets import Slider
 # Config
 # -------------------------------------
 scenarios = ['highway', 'merge', 'roundabout']
-demo_file = 'demo2.npy'
+demo_file = 'demo1.npy'
 latent_dim = 1024
 latent_side = int(np.sqrt(latent_dim))  # 32x32
 model_name = "super_dqn_sae"

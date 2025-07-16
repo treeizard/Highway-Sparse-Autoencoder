@@ -1,0 +1,10 @@
+Scenario,TestFolder,OrigLength,TransLength,OrigSurvival,TransSurvival,MT_Result
+highway,data_mr23,11,40,Failed,Survived,MT Fail
+highway,data_mr24,11,22,Failed,Failed,MT Success
+highway,data_mr34,11,10,Failed,Failed,MT Success
+merge,data_mr23,15,15,Survived,Survived,MT Success
+merge,data_mr24,15,8,Survived,Failed,MT Fail
+merge,data_mr34,15,9,Survived,Failed,MT Fail
+roundabout,data_mr23,11,6,Survived,Failed,MT Fail
+roundabout,data_mr24,11,11,Survived,Survived,MT Success
+roundabout,data_mr34,11,11,Survived,Survived,MT Success
